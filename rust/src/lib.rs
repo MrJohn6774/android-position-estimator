@@ -6,13 +6,15 @@ use winit::{
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
 };
 
+pub mod vulkan;
+
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
 fn run(mut event_loop: EventLoop<()>) {
     log::info!("Running mainloop...");
 
-    // todo!("init vulkan instance");
+    let mut app = vulkan::VkApplication::new(&event_loop);
 
     // It's not recommended to use `run` on Android because it will call
     // `std::process::exit` when finished which will short-circuit any
@@ -23,61 +25,20 @@ fn run(mut event_loop: EventLoop<()>) {
         *control_flow = ControlFlow::Wait;
         match event {
             Event::Resumed => {
-                // app.resume(event_loop);
+                // todo!("create window here")
             }
             Event::Suspended => {
                 log::info!("Suspended, dropping render state...");
-                // app.render_state = None;
             }
             Event::WindowEvent {
-                event: WindowEvent::Resized(_size),
+                event: WindowEvent::Resized(_),
                 ..
             } => {
-                // app.configure_surface_swapchain();
-                // Winit: doesn't currently implicitly request a redraw
-                // for a resize which may be required on some platforms...
-                // app.queue_redraw();
+                app.recreate_swapchain = false;
             }
-            Event::RedrawRequested(_) => {
-                log::info!("Handling Redraw Request");
-
-                // if let Some(ref surface_state) = app.surface_state {
-                //     if let Some(ref rs) = app.render_state {
-                //         let frame = surface_state
-                //             .surface
-                //             .get_current_texture()
-                //             .expect("Failed to acquire next swap chain texture");
-                //         let view = frame
-                //             .texture
-                //             .create_view(&wgpu::TextureViewDescriptor::default());
-                //         let mut encoder =
-                //             rs.device
-                //                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                //                     label: None,
-                //                 });
-                //         {
-                //             let mut rpass =
-                //                 encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                //                     label: None,
-                //                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                //                         view: &view,
-                //                         resolve_target: None,
-                //                         ops: wgpu::Operations {
-                //                             load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
-                //                             store: true,
-                //                         },
-                //                     })],
-                //                     depth_stencil_attachment: None,
-                //                 });
-                //             rpass.set_pipeline(&rs.render_pipeline);
-                //             rpass.draw(0..3, 0..1);
-                //         }
-
-                //         rs.queue.submit(Some(encoder.finish()));
-                //         frame.present();
-                //         surface_state.window.request_redraw();
-                //     }
-                // }
+            Event::RedrawEventsCleared => {
+                log::info!("Handling Redraw Events Cleared");
+                app.handle_redraw_events_cleared();
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,

@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 log = "0.4.20"
+vulkano = { git = "https://github.com/vulkano-rs/vulkano.git", rev = "b3ef5d7" }
+vulkano-shaders = { git = "https://github.com/vulkano-rs/vulkano.git", rev = "b3ef5d7" }
 winit = { version = "0.28", features = [ "android-native-activity" ] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
