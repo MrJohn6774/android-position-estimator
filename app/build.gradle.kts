@@ -1,11 +1,15 @@
+import com.android.build.gradle.internal.tasks.factory.dependsOn
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.github.willir.rust.cargo-ndk-android")
 }
 
 android {
     namespace = "com.mrjohn6774.androidpositionestimator"
     compileSdk = 33
+    ndkVersion = "25.2.9519653"
 
     defaultConfig {
         applicationId = "com.mrjohn6774.androidpositionestimator"
@@ -14,6 +18,10 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // Reference: https://github.com/MatrixDev/GradleAndroidRustPlugin/issues/3#issuecomment-1505416835
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -27,6 +35,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        getByName("debug") {
+            isJniDebuggable = true
         }
     }
     compileOptions {
@@ -48,6 +59,19 @@ android {
         }
     }
 }
+
+cargoNdk {
+    // Reference: https://github.com/willir/cargo-ndk-android-gradle
+    module = "rust"
+    targets = arrayListOf("arm64")
+}
+
+tasks.register<Exec>("cargoClean") {
+    executable("cargo")     // cargo.cargoCommand
+    args("clean")
+    workingDir("$projectDir/../${cargoNdk.module}")
+}
+tasks.clean.dependsOn("cargoClean")
 
 dependencies {
 
