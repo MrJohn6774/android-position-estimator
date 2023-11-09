@@ -62,7 +62,7 @@ android {
 
 cargoNdk {
     // Reference: https://github.com/willir/cargo-ndk-android-gradle
-    module = "rust"
+    module = "."
     targets = arrayListOf("arm64")
 }
 
