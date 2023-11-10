@@ -1,12 +1,12 @@
-use log::trace;
+mod cube;
 
+use pollster;
+use rend3;
+use rend3::types::glam;
+use rend3_routine;
+use std::sync::Arc;
+use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
 use winit::platform::run_return::EventLoopExtRunReturn;
-use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
-};
-
-pub mod vulkan;
 
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
@@ -14,70 +14,212 @@ use winit::platform::android::activity::AndroidApp;
 fn run(mut event_loop: EventLoop<()>) {
     log::info!("Running mainloop...");
 
-    let mut app = vulkan::VkApplication::new(&event_loop);
+    let window = {
+        let mut builder = winit::window::WindowBuilder::new();
+        builder = builder.with_title("Android Position Estimator");
+        builder.build(&event_loop).expect("Could not build window")
+    };
 
-    // It's not recommended to use `run` on Android because it will call
-    // `std::process::exit` when finished which will short-circuit any
-    // Java lifecycle handling
-    event_loop.run_return(move |event, event_loop, control_flow| {
-        log::info!("Received Winit event: {event:?}");
+    let window_size = window.inner_size();
 
-        *control_flow = ControlFlow::Wait;
-        match event {
-            Event::Resumed => {
-                // todo!("create window here")
-            }
-            Event::Suspended => {
-                log::info!("Suspended, dropping render state...");
-            }
-            Event::WindowEvent {
-                event: WindowEvent::Resized(_),
-                ..
-            } => {
-                app.recreate_swapchain = false;
-            }
-            Event::RedrawEventsCleared => {
-                log::info!("Handling Redraw Events Cleared");
-                app.handle_redraw_events_cleared();
-            }
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *control_flow = ControlFlow::Exit,
-            Event::WindowEvent { event: _, .. } => {
-                log::info!("Window event {:#?}", event);
-            }
-            _ => {}
+    // Create the Instance, Adapter, and Device. We can specify preferred backend,
+    // device name, or rendering profile. In this case we let rend3 choose for us.
+    let iad = pollster::block_on(rend3::create_iad(None, None, None, None)).unwrap();
+
+    // The one line of unsafe needed. We just need to guarentee that the window
+    // outlives the use of the surface.
+    //
+    // SAFETY: this surface _must_ not be used after the `window` dies. Both the
+    // event loop and the renderer are owned by the `run` closure passed to winit,
+    // so rendering work will stop after the window dies.
+    let surface = Arc::new(unsafe { iad.instance.create_surface(&window) }.unwrap());
+    // Get the preferred format for the surface.
+    let caps = surface.get_capabilities(&iad.adapter);
+    let preferred_format = caps.formats[0];
+
+    // Configure the surface to be ready for rendering.
+    rend3::configure_surface(
+        &surface,
+        &iad.device,
+        preferred_format,
+        glam::UVec2::new(window_size.width, window_size.height),
+        rend3::types::PresentMode::Fifo,
+    );
+
+    // Make us a renderer.
+    let renderer = rend3::Renderer::new(
+        iad,
+        rend3::types::Handedness::Left,
+        Some(window_size.width as f32 / window_size.height as f32),
+    )
+    .unwrap();
+
+    // Create the shader preprocessor with all the default shaders added.
+    let mut spp = rend3::ShaderPreProcessor::new();
+    rend3_routine::builtin_shaders(&mut spp);
+
+    // Create the base rendergraph.
+    let base_rendergraph = rend3_routine::base::BaseRenderGraph::new(&renderer, &spp);
+
+    let mut data_core = renderer.data_core.lock();
+    let pbr_routine = rend3_routine::pbr::PbrRoutine::new(
+        &renderer,
+        &mut data_core,
+        &spp,
+        &base_rendergraph.interfaces,
+    );
+    drop(data_core);
+    let tonemapping_routine = rend3_routine::tonemapping::TonemappingRoutine::new(
+        &renderer,
+        &spp,
+        &base_rendergraph.interfaces,
+        preferred_format,
+    );
+
+    // Create mesh and calculate smooth normals based on vertices
+    let mesh = cube::create_mesh();
+
+    // Add mesh to renderer's world.
+    //
+    // All handles are refcounted, so we only need to hang onto the handle until we
+    // make an object.
+    let mesh_handle = renderer.add_mesh(mesh);
+
+    // Add PBR material with all defaults except a single color.
+    let material = rend3_routine::pbr::PbrMaterial {
+        albedo: rend3_routine::pbr::AlbedoComponent::Value(glam::Vec4::new(0.0, 0.5, 0.5, 1.0)),
+        ..rend3_routine::pbr::PbrMaterial::default()
+    };
+    let material_handle = renderer.add_material(material);
+
+    // Combine the mesh and the material with a location to give an object.
+    let object = rend3::types::Object {
+        mesh_kind: rend3::types::ObjectMeshKind::Static(mesh_handle),
+        material: material_handle,
+        transform: glam::Mat4::IDENTITY,
+    };
+    // Creating an object will hold onto both the mesh and the material
+    // even if they are deleted.
+    //
+    // We need to keep the object handle alive.
+    let _object_handle = renderer.add_object(object);
+
+    let view_location = glam::Vec3::new(3.0, 3.0, -5.0);
+    let view = glam::Mat4::from_euler(glam::EulerRot::XYZ, -0.55, 0.5, 0.0);
+    let view = view * glam::Mat4::from_translation(-view_location);
+
+    // Set camera's location
+    renderer.set_camera_data(rend3::types::Camera {
+        projection: rend3::types::CameraProjection::Perspective {
+            vfov: 60.0,
+            near: 0.1,
+        },
+        view,
+    });
+
+    // Create a single directional light
+    //
+    // We need to keep the directional light handle alive.
+    let _directional_handle = renderer.add_directional_light(rend3::types::DirectionalLight {
+        color: glam::Vec3::ONE,
+        intensity: 10.0,
+        // Direction will be normalized
+        direction: glam::Vec3::new(-1.0, -4.0, 2.0),
+        distance: 400.0,
+        resolution: 2048,
+    });
+
+    let mut resolution = glam::UVec2::new(window_size.width, window_size.height);
+
+    event_loop.run_return(move |event, _, control_flow| match event {
+        // Close button was clicked, we should close.
+        winit::event::Event::WindowEvent {
+            event: winit::event::WindowEvent::CloseRequested,
+            ..
+        } => {
+            *control_flow = ControlFlow::Exit;
         }
+        // Window was resized, need to resize renderer.
+        winit::event::Event::WindowEvent {
+            event: winit::event::WindowEvent::Resized(physical_size),
+            ..
+        } => {
+            resolution = glam::UVec2::new(physical_size.width, physical_size.height);
+            // Reconfigure the surface for the new size.
+            rend3::configure_surface(
+                &surface,
+                &renderer.device,
+                preferred_format,
+                glam::UVec2::new(resolution.x, resolution.y),
+                rend3::types::PresentMode::Fifo,
+            );
+            // Tell the renderer about the new aspect ratio.
+            renderer.set_aspect_ratio(resolution.x as f32 / resolution.y as f32);
+        }
+        // Render!
+        winit::event::Event::MainEventsCleared => {
+            // Get a frame
+            let frame = surface.get_current_texture().unwrap();
+
+            // Swap the instruction buffers so that our frame's changes can be processed.
+            renderer.swap_instruction_buffers();
+            // Evaluate our frame's world-change instructions
+            let mut eval_output = renderer.evaluate_instructions();
+
+            // Build a rendergraph
+            let mut graph = rend3::graph::RenderGraph::new();
+
+            // Import the surface texture into the render graph.
+            let frame_handle = graph.add_imported_render_target(
+                &frame,
+                0..1,
+                rend3::graph::ViewportRect::from_size(resolution),
+            );
+            // Add the default rendergraph without a skybox
+            base_rendergraph.add_to_graph(
+                &mut graph,
+                &eval_output,
+                &pbr_routine,
+                None,
+                &tonemapping_routine,
+                frame_handle,
+                resolution,
+                rend3::types::SampleCount::One,
+                glam::Vec4::ZERO,
+                glam::Vec4::new(0.10, 0.05, 0.10, 1.0), // Nice scene-referred purple
+            );
+
+            // Dispatch a render using the built up rendergraph!
+            graph.execute(&renderer, &mut eval_output);
+
+            // Present the frame
+            frame.present();
+        }
+        // Other events we don't care about
+        _ => {}
     });
 }
 
-fn _main(event_loop: EventLoop<()>) {
-    run(event_loop);
-}
-
-#[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Warn));
 
     let event_loop = EventLoopBuilder::with_user_event()
         .with_android_app(app)
         .build();
-    _main(event_loop);
+    run(event_loop);
 }
 
-#[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
-fn main() {
+pub fn main() {
     env_logger::builder()
-        .filter_level(log::LevelFilter::Info) // Default Log Level
+        .filter_level(log::LevelFilter::Warn)
         .parse_default_env()
         .init();
 
-    let event_loop = EventLoopBuilder::new().build();
-    _main(event_loop);
+    let event_loop = winit::event_loop::EventLoop::new();
+    run(event_loop);
 }

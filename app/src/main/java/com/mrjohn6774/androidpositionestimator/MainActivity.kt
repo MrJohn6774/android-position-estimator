@@ -6,7 +6,7 @@ import android.app.NativeActivity
 class MainActivity : NativeActivity() {
     companion object {
         init {
-            System.loadLibrary("main")
+            System.loadLibrary("android_position_estimator")
         }
     }
 

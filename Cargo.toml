@@ -5,10 +5,25 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+desktop = []
+
+[[bin]]
+name = "position_estimator"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+[lib]
+name = "android_position_estimator"
+crate_type=["cdylib", "lib"]
+
 [dependencies]
+glam = "0.24.2"
 log = "0.4.20"
-vulkano = { git = "https://github.com/vulkano-rs/vulkano.git", rev = "b3ef5d7" }
-vulkano-shaders = { git = "https://github.com/vulkano-rs/vulkano.git", rev = "b3ef5d7" }
+pollster = "0.3.0"
+rend3 = { git = "https://github.com/BVE-Reborn/rend3.git", rev = "ed38b90" }
+rend3-routine = { git = "https://github.com/BVE-Reborn/rend3.git", rev = "ed38b90" }
 winit = { version = "0.28", features = [ "android-native-activity" ] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
@@ -16,7 +31,3 @@ env_logger = "0.10"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-
-[lib]
-name="main"
-crate_type=["cdylib"]

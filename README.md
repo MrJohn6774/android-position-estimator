@@ -13,3 +13,11 @@ rustup target add aarch64-linux-android x86_64-linux-android
 cargo install cargo-ndk
 ```
 - Specify path to NDK via either setting `ANDROID_NDK_HOME` env variable, or ndk.dir property in `local.properties`
+
+### Build
+Android build is managed by [cargo-ndk-android-gradle](https://github.com/willir/cargo-ndk-android-gradle). Simply click `Build`, then `Run` in Android Studio.
+
+Build and run on desktop
+```bash
+cargo run --features="desktop"
+```
