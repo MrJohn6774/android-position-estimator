@@ -5,9 +5,11 @@ use rend3;
 use rend3::types::glam;
 use rend3_routine;
 use std::sync::Arc;
-use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
+use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::run_return::EventLoopExtRunReturn;
 
+#[cfg(target_os = "android")]
+use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]
 use winit::platform::android::activity::AndroidApp;
 
