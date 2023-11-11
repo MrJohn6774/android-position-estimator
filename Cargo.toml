@@ -19,12 +19,8 @@ name = "android_position_estimator"
 crate_type=["cdylib", "lib"]
 
 [dependencies]
-glam = "0.24.2"
+bevy = "0.12.0"
 log = "0.4.20"
-pollster = "0.3.0"
-rend3 = { git = "https://github.com/BVE-Reborn/rend3.git", rev = "ed38b90" }
-rend3-routine = { git = "https://github.com/BVE-Reborn/rend3.git", rev = "ed38b90" }
-winit = { version = "0.28", features = [ "android-native-activity" ] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.10"

@@ -18,10 +18,19 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // Reference: https://github.com/MatrixDev/GradleAndroidRustPlugin/issues/3#issuecomment-1505416835
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+    }
+
+    externalNativeBuild {
+        ndkBuild.path("jni/Android.mk")
     }
 
     buildTypes {
@@ -59,7 +68,7 @@ android {
 cargoNdk {
     // Reference: https://github.com/willir/cargo-ndk-android-gradle
     module = "."
-    targets = arrayListOf("arm64", "x86_64")
+    targets = arrayListOf("arm64")
 }
 
 tasks.register<Exec>("cargoClean") {
