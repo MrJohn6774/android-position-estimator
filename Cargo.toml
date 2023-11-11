@@ -20,10 +20,9 @@ crate_type=["cdylib", "lib"]
 
 [dependencies]
 bevy = "0.12.0"
-log = "0.4.20"
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
-env_logger = "0.10"
+[profile.dev]
+opt-level = 1
 
-[target.'cfg(target_os = "android")'.dependencies]
-android_logger = "0.11.0"
+[profile.dev.package."*"]
+opt-level = 3
