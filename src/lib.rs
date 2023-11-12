@@ -1,7 +1,8 @@
 #![allow(clippy::type_complexity)]
 
+mod camera;
+
 use bevy::{
-    input::touch::TouchPhase,
     prelude::*,
     render::{
         settings::{Backends, RenderCreation::Automatic, WgpuSettings},
@@ -9,6 +10,7 @@ use bevy::{
     },
     window::WindowMode,
 };
+use camera::AppCameraPlugin;
 
 #[bevy_main]
 pub fn main() {
@@ -31,8 +33,9 @@ pub fn main() {
                 ..default()
             }),
     )
+    .add_plugins(AppCameraPlugin)
     .add_systems(Startup, (setup_scene))
-    .add_systems(Update, (touch_camera, button_handler));
+    .add_systems(Update, (button_handler));
 
     // MSAA makes some Android devices panic, this is under investigation
     // https://github.com/bevyengine/bevy/issues/8229
@@ -40,33 +43,6 @@ pub fn main() {
     app.insert_resource(Msaa::Off);
 
     app.run();
-}
-
-fn touch_camera(
-    windows: Query<&Window>,
-    mut touches: EventReader<TouchInput>,
-    mut camera: Query<&mut Transform, With<Camera3d>>,
-    mut last_position: Local<Option<Vec2>>,
-) {
-    let window = windows.single();
-
-    for touch in touches.read() {
-        if touch.phase == TouchPhase::Started {
-            *last_position = None;
-        }
-        if let Some(last_position) = *last_position {
-            let mut transform = camera.single_mut();
-            *transform = Transform::from_xyz(
-                transform.translation.x
-                    + (touch.position.x - last_position.x) / window.width() * 5.0,
-                transform.translation.y,
-                transform.translation.z
-                    + (touch.position.y - last_position.y) / window.height() * 5.0,
-            )
-            .looking_at(Vec3::ZERO, Vec3::Y);
-        }
-        *last_position = Some(touch.position);
-    }
 }
 
 /// set up a simple 3D scene
@@ -112,11 +88,6 @@ fn setup_scene(
             shadows_enabled: true,
             ..default()
         },
-        ..default()
-    });
-    // camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 

@@ -159,6 +159,7 @@ name = "android-position-estimator"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_panorbit_camera",
 ]
 
 [[package]]
@@ -495,6 +496,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_easings"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d13de5afeee849a6f5a9f35eace1a41efe01fc005ad85671c54876909216f2e6"
+dependencies = [
+ "bevy",
+ "interpolation",
+]
+
+[[package]]
 name = "bevy_ecs"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -717,6 +728,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b596c41a56f2268ec7cde560edc588bc7b5886e4b49c8b27c4dcc9f7c743424c"
 dependencies = [
  "glam",
+]
+
+[[package]]
+name = "bevy_panorbit_camera"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346761a3e63bc54b658ed95c9714c50535f59419f075f87f605c8449bb67e57f"
+dependencies = [
+ "bevy",
+ "bevy_easings",
 ]
 
 [[package]]
@@ -1938,6 +1959,12 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
 ]
+
+[[package]]
+name = "interpolation"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9c13ae9d91148fcb4aab6654c4c2a7d02a15395ea9e23f65170f175f8b269ce"
 
 [[package]]
 name = "io-kit-sys"
