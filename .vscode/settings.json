@@ -1,3 +1,9 @@
 {
+    "rust-analyzer.server.extraEnv": {
+        "AR_AARCH64_LINUX_ANDROID": "${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar",
+        "CC_aarch64_linux_android": "${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android33-clang --sysroot=${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/sysroot",
+        "CXX_aarch64_linux_android": "${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android33-clang++ --sysroot=${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/sysroot",
+    },
+    "rust-analyzer.cargo.target": "aarch64-linux-android",
     "rust-analyzer.check.targets": ["aarch64-linux-android", "x86_64-pc-windows-msvc"]
 }
