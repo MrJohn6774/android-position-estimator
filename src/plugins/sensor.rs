@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use bevy::prelude::*;
 use bevy::window::ApplicationLifetime;
 
@@ -10,24 +8,23 @@ pub struct SensorPlugin;
 impl Plugin for SensorPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(SensorData::default())
-            .insert_resource(Sensors::default())
+            .insert_non_send_resource(Sensors::default())
             .add_systems(PostStartup, setup_sensors)
             .add_systems(Update, (handle_lifetime, update_sensor_data));
     }
 }
 
-#[derive(Resource)]
 struct Sensors {
-    // manager: Arc<Option<SensorManager>>,
-    queue: Arc<Option<SensorEventQueue>>,
-    sensors: Vec<Arc<Sensor>>,
+    // manager: Option<SensorManager>,
+    queue: Option<SensorEventQueue>,
+    sensors: Vec<Sensor>,
 }
 
 impl Default for Sensors {
     fn default() -> Self {
         Self {
-            // manager: Arc::new(None),
-            queue: Arc::new(None),
+            // manager: None,
+            queue: None,
             sensors: Vec::new(),
         }
     }
@@ -40,7 +37,6 @@ impl Sensors {
         self.sensors.iter().for_each(|sensor| {
             self.queue
                 .as_ref()
-                .as_ref()
                 .unwrap()
                 .enable_sensor(&sensor, Self::SAMPLING_PERIOD);
         })
@@ -48,30 +44,29 @@ impl Sensors {
 
     fn disable(&self) {
         self.sensors.iter().for_each(|sensor| {
-            self.queue
-                .as_ref()
-                .as_ref()
-                .unwrap()
-                .disable_sensor(&sensor);
+            self.queue.as_ref().unwrap().disable_sensor(&sensor);
         })
     }
 }
 
-fn setup_sensors(mut sensors: ResMut<Sensors>) {
+fn setup_sensors(mut sensors: NonSendMut<Sensors>) {
     let manager = SensorManager::new();
     let queue = manager.create_event_queue();
 
     [SensorType::Accelerometer].iter().for_each(|&sensor_type| {
         sensors
             .sensors
-            .push(Arc::new(manager.get_default_sensor(sensor_type)));
+            .push(manager.get_default_sensor(sensor_type));
     });
 
     // sensors.manager = Arc::new(Some(manager));
-    sensors.queue = Arc::new(Some(queue));
+    sensors.queue = Some(queue);
 }
 
-fn handle_lifetime(mut lifetime_events: EventReader<ApplicationLifetime>, sensors: Res<Sensors>) {
+fn handle_lifetime(
+    mut lifetime_events: EventReader<ApplicationLifetime>,
+    sensors: NonSend<Sensors>,
+) {
     for event in lifetime_events.read() {
         match event {
             ApplicationLifetime::Resumed => sensors.enable(),
@@ -96,7 +91,7 @@ impl Default for SensorData {
     }
 }
 
-fn update_sensor_data(sensors: Res<Sensors>, sensor_data: ResMut<SensorData>) {
+fn update_sensor_data(sensors: NonSendMut<Sensors>, sensor_data: ResMut<SensorData>) {
     let events = sensors.queue.as_ref().as_ref().unwrap().get_events();
     dbg!(events);
 }

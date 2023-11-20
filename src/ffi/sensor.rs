@@ -33,15 +33,9 @@ pub struct Sensor {
     sensor: *const ASensor,
 }
 
-unsafe impl Sync for Sensor {}
-unsafe impl Send for Sensor {}
-
 pub struct SensorManager {
     manager: *mut ASensorManager,
 }
-
-unsafe impl Sync for SensorManager {}
-unsafe impl Send for SensorManager {}
 
 #[derive(Debug)]
 pub struct SensorEvent {
@@ -55,9 +49,6 @@ pub struct SensorEvent {
 pub struct SensorEventQueue {
     queue: *mut ASensorEventQueue,
 }
-
-unsafe impl Sync for SensorEventQueue {}
-unsafe impl Send for SensorEventQueue {}
 
 impl SensorManager {
     pub fn new() -> Self {
