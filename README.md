@@ -8,14 +8,22 @@ An Android app that performs numerical integration to estimate a device's real-t
 ```bash
 rustup target add aarch64-linux-android x86_64-linux-android
 ```
-- Install cargo-ndk
+- Install [cargo-ndk](https://github.com/bbqsrc/cargo-ndk)
 ```bash
 cargo install cargo-ndk
 ```
 - Specify path to NDK via either setting `ANDROID_NDK_HOME` env variable, or ndk.dir property in `local.properties`
 
 ### Build
-Android build is managed by [cargo-ndk-android-gradle](https://github.com/willir/cargo-ndk-android-gradle). Simply click `Build`, then `Run` in Android Studio.
+Android build is managed by [cargo-ndk-android-gradle](https://github.com/willir/cargo-ndk-android-gradle). Simply click `Run 'app'` in Android Studio.
+
+It is essentially running the following commands under the hood:
+```bash
+cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
+./gradlew.bat build
+./gradlew.bat installDebug
+adb shell am start -n com.mrjohn6774.androidpositionestimator/.MainActivity
+```
 
 Build and run on desktop
 ```bash
