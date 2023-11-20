@@ -1,16 +1,19 @@
 #![allow(clippy::type_complexity)]
 
-mod camera;
+#[cfg(target_os = "android")]
+mod ffi;
+mod plugins;
 
+#[cfg(target_os = "android")]
+use bevy::render::settings::Backends;
 use bevy::{
     prelude::*,
-    render::{
-        settings::{Backends, RenderCreation::Automatic, WgpuSettings},
-        RenderPlugin,
-    },
+    render::{settings::WgpuSettings, RenderPlugin},
     window::WindowMode,
 };
-use camera::AppCameraPlugin;
+use plugins::camera::AppCameraPlugin;
+#[cfg(target_os = "android")]
+use plugins::sensor::SensorPlugin;
 
 #[bevy_main]
 pub fn main() {
@@ -18,11 +21,12 @@ pub fn main() {
     app.add_plugins(
         DefaultPlugins
             .set(RenderPlugin {
-                render_creation: Automatic(WgpuSettings {
+                render_creation: WgpuSettings {
                     #[cfg(target_os = "android")]
                     backends: Some(Backends::VULKAN),
                     ..default()
-                }),
+                }
+                .into(),
             })
             .set(WindowPlugin {
                 primary_window: Some(Window {
@@ -36,6 +40,9 @@ pub fn main() {
     .add_plugins(AppCameraPlugin)
     .add_systems(Startup, (setup_scene))
     .add_systems(Update, (button_handler));
+
+    #[cfg(target_os = "android")]
+    app.add_plugins(SensorPlugin);
 
     // MSAA makes some Android devices panic, this is under investigation
     // https://github.com/bevyengine/bevy/issues/8229

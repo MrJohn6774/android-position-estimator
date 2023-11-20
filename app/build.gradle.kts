@@ -69,6 +69,7 @@ cargoNdk {
     // Reference: https://github.com/willir/cargo-ndk-android-gradle
     module = "."
     targets = arrayListOf("arm64")
+    apiLevel = 33
 }
 
 tasks.register<Exec>("cargoClean") {

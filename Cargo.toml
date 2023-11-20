@@ -21,6 +21,12 @@ crate_type=["cdylib", "lib"]
 [dependencies]
 bevy = "0.12.0"
 bevy_panorbit_camera = "0.9.0"
+num = "0.4.1"
+num-derive = "0.4.1"
+num-traits = "0.2.17"
+
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-sys = "0.4.1"
 
 [profile.dev]
 opt-level = 1
