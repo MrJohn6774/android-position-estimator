@@ -95,13 +95,11 @@ impl Default for SensorData {
 }
 
 fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorData>) {
-    let events = sensors.queue.as_ref().unwrap().get_events();
-
-    dbg!(events).iter().for_each(|event| {
-        match event.sensor_type {
+    if let Some(event) = sensors.queue.as_ref().unwrap().get_events() {
+        match dbg!(&event).sensor_type {
             SensorType::Accelerometer => sensor_data.acceleration = Vec3::from_slice(&event.values),
             SensorType::Gyroscope => todo!(),
             SensorType::Compass => todo!(),
-        }
-    });
+        };
+    }
 }

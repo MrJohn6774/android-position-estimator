@@ -92,7 +92,7 @@ impl SensorEventQueue {
         assert!(status >= 0);
     }
 
-    pub fn get_events(&self) -> Vec<SensorEvent> {
+    pub fn get_events(&self) -> Option<SensorEvent> {
         let mut fd = -1;
         let mut events = -1;
         let mut data = std::ptr::null_mut();
@@ -101,7 +101,7 @@ impl SensorEventQueue {
             ALooper_pollAll(0, &mut fd, &mut events, &mut data)
         };
         assert_ne!(status, 0);
-        let mut events = Vec::new();
+
         let mut event: MaybeUninit<ASensorEvent> = MaybeUninit::uninit();
         let event_count = unsafe { ASensorEventQueue_getEvents(self.queue, event.as_mut_ptr(), 1) };
         let event = unsafe { event.assume_init() };
@@ -110,7 +110,7 @@ impl SensorEventQueue {
             if let Some(sensor_type) = num::FromPrimitive::from_i32(event.type_) {
                 match sensor_type {
                     SensorType::Accelerometer => {
-                        events.push(SensorEvent {
+                        return Some(SensorEvent {
                             accuracy: num::FromPrimitive::from_i8(unsafe {
                                 event.__bindgen_anon_1.__bindgen_anon_1.acceleration.status
                             })
@@ -151,7 +151,7 @@ impl SensorEventQueue {
                 warn!("Sensor not recognized!")
             }
         }
-        events
+        None
     }
 
     pub fn disable_sensor(&self, sensor: &Sensor) {
