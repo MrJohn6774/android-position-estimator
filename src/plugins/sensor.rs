@@ -31,9 +31,10 @@ impl Default for Sensors {
 }
 
 impl Sensors {
-    const SAMPLING_PERIOD: i32 = 1_000_000 / 50; // microseconds (50Hz)
+    const SAMPLING_PERIOD: i32 = 1_000_000 / 10; // microseconds (50Hz)
 
     fn enable(&self) {
+        dbg!("Enabling sensors...");
         self.sensors.iter().for_each(|sensor| {
             self.queue
                 .as_ref()
@@ -43,6 +44,7 @@ impl Sensors {
     }
 
     fn disable(&self) {
+        dbg!("Disabling sensors...");
         self.sensors.iter().for_each(|sensor| {
             self.queue.as_ref().unwrap().disable_sensor(&sensor);
         })
@@ -61,6 +63,7 @@ fn setup_sensors(mut sensors: NonSendMut<Sensors>) {
 
     // sensors.manager = Arc::new(Some(manager));
     sensors.queue = Some(queue);
+    sensors.enable();
 }
 
 fn handle_lifetime(
@@ -91,7 +94,14 @@ impl Default for SensorData {
     }
 }
 
-fn update_sensor_data(sensors: NonSendMut<Sensors>, sensor_data: ResMut<SensorData>) {
-    let events = sensors.queue.as_ref().as_ref().unwrap().get_events();
-    dbg!(events);
+fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorData>) {
+    let events = sensors.queue.as_ref().unwrap().get_events();
+
+    dbg!(events).iter().for_each(|event| {
+        match event.sensor_type {
+            SensorType::Accelerometer => sensor_data.acceleration = Vec3::from_slice(&event.values),
+            SensorType::Gyroscope => todo!(),
+            SensorType::Compass => todo!(),
+        }
+    });
 }

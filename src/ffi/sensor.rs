@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use bevy::log::warn;
 use ndk_sys::{
     ALooper_pollAll, ALooper_prepare, ASensor, ASensorEvent, ASensorEventQueue,
     ASensorEventQueue_disableSensor, ASensorEventQueue_enableSensor, ASensorEventQueue_getEvents,
@@ -13,7 +14,7 @@ use num_derive::FromPrimitive;
 // use num_traits::FromPrimitive;
 use std::mem::MaybeUninit;
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 pub enum SensorAccuracy {
     High = ASENSOR_STATUS_ACCURACY_HIGH as isize,
     Low = ASENSOR_STATUS_ACCURACY_LOW as isize,
@@ -39,10 +40,10 @@ pub struct SensorManager {
 
 #[derive(Debug)]
 pub struct SensorEvent {
-    accuracy: i8,
-    sensor: SensorType,
-    timestamp: i64,
-    values: Vec<f32>,
+    pub accuracy: SensorAccuracy,
+    pub sensor_type: SensorType,
+    pub timestamp: i64,
+    pub values: Vec<f32>,
 }
 
 #[derive(Debug)]
@@ -67,7 +68,9 @@ impl SensorManager {
         let looper_ptr = unsafe { ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as _) };
         assert!(!looper_ptr.is_null(), "*mut ALooper is null");
         let queue = unsafe {
-            ASensorManager_createEventQueue(self.manager, looper_ptr, 0, None, std::ptr::null_mut())
+            // ident field has to be 2
+            // (https://github.com/rust-mobile/android-activity/blob/9fce89021959a6f6ea8853221367bfa305803369/android-activity/src/native_activity/mod.rs#L290)
+            ASensorManager_createEventQueue(self.manager, looper_ptr, 2, None, std::ptr::null_mut())
         };
         assert!(!queue.is_null(), "*mut ASensorEventQueue is null");
         SensorEventQueue { queue }
@@ -93,24 +96,26 @@ impl SensorEventQueue {
         let mut fd = -1;
         let mut events = -1;
         let mut data = std::ptr::null_mut();
-        unsafe {
+        let status = unsafe {
             // non-blocking
             ALooper_pollAll(0, &mut fd, &mut events, &mut data)
         };
+        assert_ne!(status, 0);
         let mut events = Vec::new();
         let mut event: MaybeUninit<ASensorEvent> = MaybeUninit::uninit();
-        let mut event_count =
-            unsafe { ASensorEventQueue_getEvents(self.queue, event.as_mut_ptr(), 1) };
-        let mut event = unsafe { event.assume_init() };
-        while event_count > 0 {
-            if let Some(sensor_type) = num::FromPrimitive::from_i32(event.reserved0.clone()) {
+        let event_count = unsafe { ASensorEventQueue_getEvents(self.queue, event.as_mut_ptr(), 1) };
+        let event = unsafe { event.assume_init() };
+        assert!(event_count >= 0 && event_count <= 1);
+        if event_count == 1 {
+            if let Some(sensor_type) = num::FromPrimitive::from_i32(event.type_) {
                 match sensor_type {
                     SensorType::Accelerometer => {
                         events.push(SensorEvent {
-                            accuracy: unsafe {
+                            accuracy: num::FromPrimitive::from_i8(unsafe {
                                 event.__bindgen_anon_1.__bindgen_anon_1.acceleration.status
-                            },
-                            sensor: SensorType::Accelerometer,
+                            })
+                            .unwrap_or(SensorAccuracy::Unreliable),
+                            sensor_type: SensorType::Accelerometer,
                             timestamp: event.timestamp,
                             values: unsafe {
                                 vec![
@@ -142,9 +147,9 @@ impl SensorEventQueue {
                     SensorType::Gyroscope => todo!(),
                     SensorType::Compass => todo!(),
                 }
+            } else {
+                warn!("Sensor not recognized!")
             }
-            event_count =
-                unsafe { ASensorEventQueue_getEvents(self.queue, &mut event as *mut _, 1) };
         }
         events
     }
