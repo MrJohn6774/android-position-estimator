@@ -11,6 +11,7 @@ use bevy::{
     render::{settings::WgpuSettings, RenderPlugin},
     window::WindowMode,
 };
+use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
 use plugins::camera::AppCameraPlugin;
 #[cfg(target_os = "android")]
 use plugins::sensor::SensorPlugin;
@@ -37,6 +38,8 @@ pub fn main() {
                 ..default()
             }),
     )
+    .add_plugins(ScreenDiagnosticsPlugin::default())
+    .add_plugins(ScreenFrameDiagnosticsPlugin)
     .add_plugins(AppCameraPlugin)
     .add_systems(Startup, (setup_scene))
     .add_systems(Update, (button_handler));
