@@ -11,7 +11,6 @@ use ndk_sys::{
     ASENSOR_TYPE_ACCELEROMETER, ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR, ASENSOR_TYPE_GYROSCOPE,
 };
 use num_derive::FromPrimitive;
-// use num_traits::FromPrimitive;
 use std::mem::MaybeUninit;
 
 #[derive(Debug, FromPrimitive)]

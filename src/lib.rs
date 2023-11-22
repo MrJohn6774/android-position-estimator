@@ -150,18 +150,3 @@ fn button_handler(
         }
     }
 }
-
-// Pause audio when app goes into background and resume when it returns.
-// This is handled by the OS on iOS, but not on Android.
-// fn handle_lifetime(
-//     mut lifetime_events: EventReader<ApplicationLifetime>,
-//     music_controller: Query<&AudioSink>,
-// ) {
-//     for event in lifetime_events.read() {
-//         match event {
-//             ApplicationLifetime::Suspended => music_controller.single().pause(),
-//             ApplicationLifetime::Resumed => music_controller.single().play(),
-//             ApplicationLifetime::Started => (),
-//         }
-//     }
-// }
