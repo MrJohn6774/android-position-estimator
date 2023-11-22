@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy::window::ApplicationLifetime;
+use bevy_debug_text_overlay::screen_print;
 
-use crate::ffi::sensor::{Sensor, SensorEventQueue, SensorManager, SensorType};
+use crate::ffi::sensor::{Sensor, SensorEvent, SensorEventQueue, SensorManager, SensorType};
 
 pub struct SensorPlugin;
 
@@ -10,7 +11,13 @@ impl Plugin for SensorPlugin {
         app.insert_resource(SensorData::default())
             .insert_non_send_resource(Sensors::default())
             .add_systems(PostStartup, setup_sensors)
-            .add_systems(Update, (handle_lifetime, update_sensor_data));
+            .add_systems(
+                Update,
+                (
+                    handle_lifetime,
+                    (update_sensor_data, print_sensor_data).chain(),
+                ),
+            );
     }
 }
 
@@ -18,6 +25,15 @@ struct Sensors {
     // manager: Option<SensorManager>,
     queue: Option<SensorEventQueue>,
     sensors: Vec<Sensor>,
+}
+
+#[derive(Debug, Default, Resource)]
+struct SensorData {
+    accelerometer: SensorEvent,
+    gyroscope: SensorEvent,
+    rotation: SensorEvent,
+    compass: SensorEvent,
+    gravity: SensorEvent,
 }
 
 impl Default for Sensors {
@@ -31,7 +47,7 @@ impl Default for Sensors {
 }
 
 impl Sensors {
-    const SAMPLING_PERIOD: i32 = 1_000_000 / 10; // microseconds (50Hz)
+    const SAMPLING_PERIOD: i32 = 1_000_000 / 10; // microseconds (10 Hz)
 
     fn enable(&self) {
         dbg!("Enabling sensors...");
@@ -41,6 +57,15 @@ impl Sensors {
                 .unwrap()
                 .enable_sensor(&sensor, Self::SAMPLING_PERIOD);
         })
+    }
+
+    fn get_events(&self) -> Vec<SensorEvent> {
+        if let Some(queue) = &self.queue {
+            queue.get_events()
+        } else {
+            warn!("Sensor event queue not initialized!");
+            Vec::new()
+        }
     }
 
     fn disable(&self) {
@@ -55,15 +80,22 @@ fn setup_sensors(mut sensors: NonSendMut<Sensors>) {
     let manager = SensorManager::new();
     let queue = manager.create_event_queue();
 
-    [SensorType::Accelerometer].iter().for_each(|&sensor_type| {
+    [
+        SensorType::Accelerometer,
+        SensorType::Gyroscope,
+        SensorType::Rotation,
+        SensorType::Compass,
+        SensorType::Gravity,
+    ]
+    .iter()
+    .for_each(|&sensor_type| {
         sensors
             .sensors
             .push(manager.get_default_sensor(sensor_type));
     });
 
-    // sensors.manager = Arc::new(Some(manager));
+    // sensors.manager = Some(manager);
     sensors.queue = Some(queue);
-    sensors.enable();
 }
 
 fn handle_lifetime(
@@ -74,32 +106,30 @@ fn handle_lifetime(
         match event {
             ApplicationLifetime::Resumed => sensors.enable(),
             ApplicationLifetime::Suspended => sensors.disable(),
-            ApplicationLifetime::Started => (),
-        }
-    }
-}
-
-#[derive(Resource, Debug)]
-pub struct SensorData {
-    pub acceleration: Vec3,
-    pub quaternion: Quat,
-}
-
-impl Default for SensorData {
-    fn default() -> Self {
-        Self {
-            acceleration: Vec3::ZERO,
-            quaternion: Quat::default(),
+            ApplicationLifetime::Started => sensors.enable(),
         }
     }
 }
 
 fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorData>) {
-    if let Some(event) = sensors.queue.as_ref().unwrap().get_events() {
-        match dbg!(&event).sensor_type {
-            SensorType::Accelerometer => sensor_data.acceleration = Vec3::from_slice(&event.values),
-            SensorType::Gyroscope => todo!(),
-            SensorType::Compass => todo!(),
+    let events = sensors.get_events();
+    screen_print!("Sensor queue length: {}", &events.len());
+    events.iter().for_each(|event| {
+        match event.sensor_type {
+            SensorType::Accelerometer => sensor_data.accelerometer = event.clone(),
+            SensorType::Gyroscope => sensor_data.gyroscope = event.clone(),
+            SensorType::Rotation => sensor_data.rotation = event.clone(),
+            SensorType::Compass => sensor_data.compass = event.clone(),
+            SensorType::Gravity => sensor_data.gravity = event.clone(),
+            _ => (),
         };
-    }
+    });
+}
+
+fn print_sensor_data(sensor_data: Res<SensorData>) {
+    screen_print!("Accel: {:?}", sensor_data.accelerometer.values);
+    screen_print!("Gyro: {:?}", sensor_data.gyroscope.values);
+    screen_print!("Rotation: {:?}", sensor_data.rotation.values);
+    screen_print!("Compass: {:?}", sensor_data.compass.values);
+    screen_print!("Gravity: {:?}", sensor_data.gravity.values);
 }

@@ -11,6 +11,7 @@ use bevy::{
     render::{settings::WgpuSettings, RenderPlugin},
     window::WindowMode,
 };
+use bevy_debug_text_overlay::OverlayPlugin;
 use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
 use plugins::camera::AppCameraPlugin;
 #[cfg(target_os = "android")]
@@ -40,9 +41,9 @@ pub fn main() {
     )
     .add_plugins(ScreenDiagnosticsPlugin::default())
     .add_plugins(ScreenFrameDiagnosticsPlugin)
+    .add_plugins(OverlayPlugin::default())
     .add_plugins(AppCameraPlugin)
-    .add_systems(Startup, (setup_scene))
-    .add_systems(Update, (button_handler));
+    .add_systems(Startup, (setup_scene));
 
     #[cfg(target_os = "android")]
     app.add_plugins(SensorPlugin);
@@ -100,53 +101,4 @@ fn setup_scene(
         },
         ..default()
     });
-
-    // Test ui
-    commands
-        .spawn(ButtonBundle {
-            style: Style {
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                position_type: PositionType::Absolute,
-                left: Val::Px(50.0),
-                right: Val::Px(50.0),
-                bottom: Val::Px(50.0),
-                ..default()
-            },
-            ..default()
-        })
-        .with_children(|b| {
-            b.spawn(
-                TextBundle::from_section(
-                    "Test Button",
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::BLACK,
-                        ..default()
-                    },
-                )
-                .with_text_alignment(TextAlignment::Center),
-            );
-        });
-}
-
-fn button_handler(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>),
-    >,
-) {
-    for (interaction, mut color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = Color::BLUE.into();
-            }
-            Interaction::Hovered => {
-                *color = Color::GRAY.into();
-            }
-            Interaction::None => {
-                *color = Color::WHITE.into();
-            }
-        }
-    }
 }

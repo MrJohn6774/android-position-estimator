@@ -8,12 +8,13 @@ use ndk_sys::{
     ASensorManager_destroyEventQueue, ASensorManager_getDefaultSensor, ASensorManager_getInstance,
     ALOOPER_PREPARE_ALLOW_NON_CALLBACKS, ASENSOR_STATUS_ACCURACY_HIGH, ASENSOR_STATUS_ACCURACY_LOW,
     ASENSOR_STATUS_ACCURACY_MEDIUM, ASENSOR_STATUS_NO_CONTACT, ASENSOR_STATUS_UNRELIABLE,
-    ASENSOR_TYPE_ACCELEROMETER, ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR, ASENSOR_TYPE_GYROSCOPE,
+    ASENSOR_TYPE_ACCELEROMETER, ASENSOR_TYPE_ADDITIONAL_INFO,
+    ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR, ASENSOR_TYPE_GRAVITY, ASENSOR_TYPE_GYROSCOPE,
+    ASENSOR_TYPE_ROTATION_VECTOR,
 };
 use num_derive::FromPrimitive;
-use std::mem::MaybeUninit;
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Clone, Debug, FromPrimitive)]
 pub enum SensorAccuracy {
     High = ASENSOR_STATUS_ACCURACY_HIGH as isize,
     Low = ASENSOR_STATUS_ACCURACY_LOW as isize,
@@ -26,7 +27,11 @@ pub enum SensorAccuracy {
 pub enum SensorType {
     Accelerometer = ASENSOR_TYPE_ACCELEROMETER as isize,
     Gyroscope = ASENSOR_TYPE_GYROSCOPE as isize,
+    Rotation = ASENSOR_TYPE_ROTATION_VECTOR as isize,
     Compass = ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR as isize,
+    Gravity = ASENSOR_TYPE_GRAVITY as isize,
+    AdditionalInfo = ASENSOR_TYPE_ADDITIONAL_INFO as isize,
+    Unavailable = 0,
 }
 
 pub struct Sensor {
@@ -37,7 +42,7 @@ pub struct SensorManager {
     manager: *mut ASensorManager,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SensorEvent {
     pub accuracy: SensorAccuracy,
     pub sensor_type: SensorType,
@@ -81,6 +86,17 @@ impl SensorManager {
     }
 }
 
+impl Default for SensorEvent {
+    fn default() -> Self {
+        Self {
+            accuracy: SensorAccuracy::NoContact,
+            sensor_type: SensorType::Accelerometer,
+            timestamp: 0,
+            values: vec![0., 0., 0.],
+        }
+    }
+}
+
 impl SensorEventQueue {
     pub fn enable_sensor(&self, sensor: &Sensor, sampling_period_us: i32) {
         let status = unsafe { ASensorEventQueue_enableSensor(self.queue, sensor.sensor) };
@@ -91,7 +107,7 @@ impl SensorEventQueue {
         assert!(status >= 0);
     }
 
-    pub fn get_events(&self) -> Option<SensorEvent> {
+    pub fn get_events(&self) -> Vec<SensorEvent> {
         let mut fd = -1;
         let mut events = -1;
         let mut data = std::ptr::null_mut();
@@ -101,15 +117,17 @@ impl SensorEventQueue {
         };
         assert_ne!(status, 0);
 
-        let mut event: MaybeUninit<ASensorEvent> = MaybeUninit::uninit();
-        let event_count = unsafe { ASensorEventQueue_getEvents(self.queue, event.as_mut_ptr(), 1) };
-        let event = unsafe { event.assume_init() };
+        let mut event: ASensorEvent = unsafe { std::mem::zeroed() };
+        let mut event_count =
+            unsafe { ASensorEventQueue_getEvents(self.queue, &mut event as *mut _, 1) };
         assert!(event_count >= 0 && event_count <= 1);
-        if event_count == 1 {
+
+        let mut events: Vec<SensorEvent> = Vec::new();
+        loop {
             if let Some(sensor_type) = num::FromPrimitive::from_i32(event.type_) {
                 match sensor_type {
                     SensorType::Accelerometer => {
-                        return Some(SensorEvent {
+                        events.push(SensorEvent {
                             accuracy: num::FromPrimitive::from_i8(unsafe {
                                 event.__bindgen_anon_1.__bindgen_anon_1.acceleration.status
                             })
@@ -143,14 +161,152 @@ impl SensorEventQueue {
                             },
                         });
                     }
-                    SensorType::Gyroscope => todo!(),
-                    SensorType::Compass => todo!(),
+                    SensorType::Gyroscope => events.push(SensorEvent {
+                        accuracy: num::FromPrimitive::from_i8(unsafe {
+                            event.__bindgen_anon_1.__bindgen_anon_1.gyro.status
+                        })
+                        .unwrap_or(SensorAccuracy::Unreliable),
+                        sensor_type: SensorType::Gyroscope,
+                        timestamp: event.timestamp,
+                        values: unsafe {
+                            vec![
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .gyro
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .x,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .gyro
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .y,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .gyro
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .z,
+                            ]
+                        },
+                    }),
+                    SensorType::Rotation => events.push(SensorEvent {
+                        accuracy: num::FromPrimitive::from_i8(unsafe {
+                            event.__bindgen_anon_1.__bindgen_anon_1.vector.status
+                        })
+                        .unwrap_or(SensorAccuracy::Unreliable),
+                        sensor_type: SensorType::Rotation,
+                        timestamp: event.timestamp,
+                        values: unsafe {
+                            vec![
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .x,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .y,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .z,
+                            ]
+                        },
+                    }),
+                    SensorType::Compass => events.push(SensorEvent {
+                        accuracy: num::FromPrimitive::from_i8(unsafe {
+                            event.__bindgen_anon_1.__bindgen_anon_1.vector.status
+                        })
+                        .unwrap_or(SensorAccuracy::Unreliable),
+                        sensor_type: SensorType::Compass,
+                        timestamp: event.timestamp,
+                        values: unsafe {
+                            vec![
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .x,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .y,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .z,
+                            ]
+                        },
+                    }),
+                    SensorType::Gravity => events.push(SensorEvent {
+                        accuracy: num::FromPrimitive::from_i8(unsafe {
+                            event.__bindgen_anon_1.__bindgen_anon_1.vector.status
+                        })
+                        .unwrap_or(SensorAccuracy::Unreliable),
+                        sensor_type: SensorType::Gravity,
+                        timestamp: event.timestamp,
+                        values: unsafe {
+                            vec![
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .x,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .y,
+                                event
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .vector
+                                    .__bindgen_anon_1
+                                    .__bindgen_anon_1
+                                    .z,
+                            ]
+                        },
+                    }),
+                    _ => (),
                 }
             } else {
-                warn!("Sensor not recognized!")
+                warn!("Sensor (type: {}) not recognized!", event.type_);
+            }
+
+            event_count =
+                unsafe { ASensorEventQueue_getEvents(self.queue, &mut event as *mut _, 1) };
+
+            if event_count < 1 {
+                break;
             }
         }
-        None
+        events
     }
 
     pub fn disable_sensor(&self, sensor: &Sensor) {

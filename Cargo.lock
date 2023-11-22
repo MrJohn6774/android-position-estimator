@@ -159,6 +159,7 @@ name = "android-position-estimator"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy-debug-text-overlay",
  "bevy_panorbit_camera",
  "bevy_screen_diagnostics",
  "ndk-sys",
@@ -350,6 +351,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "329e344f835f5a9a4c46a6d1d57371f726aa2c482d1bd669b2b9c4eb1ee91fd7"
 dependencies = [
  "bevy_internal",
+]
+
+[[package]]
+name = "bevy-debug-text-overlay"
+version = "7.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "823a658aae970ad62482a9e1793829faa206ca60ef15ddcccd66c0937ec38b58"
+dependencies = [
+ "bevy",
+ "lazy_static",
 ]
 
 [[package]]
