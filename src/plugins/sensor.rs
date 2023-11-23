@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::ApplicationLifetime;
 use bevy_debug_text_overlay::screen_print;
+use std::collections::VecDeque;
 
 use crate::ffi::sensor::{Sensor, SensorEvent, SensorEventQueue, SensorManager, SensorType};
 
@@ -25,15 +26,6 @@ struct Sensors {
     // manager: Option<SensorManager>,
     queue: Option<SensorEventQueue>,
     sensors: Vec<Sensor>,
-}
-
-#[derive(Debug, Default, Resource)]
-struct SensorData {
-    accelerometer: SensorEvent,
-    gyroscope: SensorEvent,
-    rotation: SensorEvent,
-    compass: SensorEvent,
-    gravity: SensorEvent,
 }
 
 impl Default for Sensors {
@@ -73,6 +65,76 @@ impl Sensors {
         self.sensors.iter().for_each(|sensor| {
             self.queue.as_ref().unwrap().disable_sensor(&sensor);
         })
+    }
+}
+
+#[derive(Debug)]
+struct SensorDataSeries {
+    series: VecDeque<SensorEvent>,
+    size: usize,
+}
+
+impl SensorDataSeries {
+    const MIN_DELTA_TIME: i64 = Sensors::SAMPLING_PERIOD as i64 * 1_000; // nanoseconds
+
+    pub fn new(size: usize) -> Self {
+        let mut series = VecDeque::with_capacity(size);
+        series.push_back(SensorEvent::default());
+
+        Self { series, size }
+    }
+
+    pub fn add(&mut self, sensor_event: SensorEvent) -> Option<SensorEvent> {
+        // newest data lives at the back, oldest at the front
+        let mut expired_data = None;
+
+        if self.series.len() >= self.size {
+            expired_data = self.series.pop_front();
+        }
+
+        if sensor_event.timestamp - self.latest().unwrap().timestamp >= Self::MIN_DELTA_TIME {
+            self.series.push_back(sensor_event);
+        }
+
+        expired_data
+    }
+
+    pub fn t_minus(&self, index: usize) -> Option<&SensorEvent> {
+        if index >= self.size {
+            warn!("Invalid to access to SensorDataSeries with index {}", index);
+            return None;
+        }
+
+        self.series.get(self.series.len() - index - 1)
+    }
+
+    pub fn latest(&self) -> Option<&SensorEvent> {
+        self.series.back()
+    }
+
+    pub fn oldest(&self) -> Option<&SensorEvent> {
+        self.series.front()
+    }
+}
+
+#[derive(Debug, Resource)]
+struct SensorData {
+    accelerometer: SensorDataSeries,
+    gyroscope: SensorDataSeries,
+    rotation: SensorDataSeries,
+    compass: SensorDataSeries,
+    gravity: SensorDataSeries,
+}
+
+impl Default for SensorData {
+    fn default() -> Self {
+        Self {
+            accelerometer: SensorDataSeries::new(5),
+            gyroscope: SensorDataSeries::new(5),
+            rotation: SensorDataSeries::new(5),
+            compass: SensorDataSeries::new(5),
+            gravity: SensorDataSeries::new(5),
+        }
     }
 }
 
@@ -116,20 +178,32 @@ fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorD
     screen_print!("Sensor queue length: {}", &events.len());
     events.iter().for_each(|event| {
         match event.sensor_type {
-            SensorType::Accelerometer => sensor_data.accelerometer = event.clone(),
-            SensorType::Gyroscope => sensor_data.gyroscope = event.clone(),
-            SensorType::Rotation => sensor_data.rotation = event.clone(),
-            SensorType::Compass => sensor_data.compass = event.clone(),
-            SensorType::Gravity => sensor_data.gravity = event.clone(),
-            _ => (),
+            SensorType::Accelerometer => sensor_data.accelerometer.add(event.clone()),
+            SensorType::Gyroscope => sensor_data.gyroscope.add(event.clone()),
+            SensorType::Rotation => sensor_data.rotation.add(event.clone()),
+            SensorType::Compass => sensor_data.compass.add(event.clone()),
+            SensorType::Gravity => sensor_data.gravity.add(event.clone()),
+            _ => None,
         };
     });
 }
 
 fn print_sensor_data(sensor_data: Res<SensorData>) {
-    screen_print!("Accel: {:?}", sensor_data.accelerometer.values);
-    screen_print!("Gyro: {:?}", sensor_data.gyroscope.values);
-    screen_print!("Rotation: {:?}", sensor_data.rotation.values);
-    screen_print!("Compass: {:?}", sensor_data.compass.values);
-    screen_print!("Gravity: {:?}", sensor_data.gravity.values);
+    screen_print!(
+        "Accel: {:?}",
+        sensor_data.accelerometer.latest().unwrap().values
+    );
+    screen_print!("Gyro: {:?}", sensor_data.gyroscope.latest().unwrap().values);
+    screen_print!(
+        "Rotation: {:?}",
+        sensor_data.rotation.latest().unwrap().values
+    );
+    screen_print!(
+        "Compass: {:?}",
+        sensor_data.compass.latest().unwrap().values
+    );
+    screen_print!(
+        "Gravity: {:?}",
+        sensor_data.gravity.latest().unwrap().values
+    );
 }
