@@ -47,7 +47,7 @@ impl Default for Sensors {
 }
 
 impl Sensors {
-    const SAMPLING_PERIOD: i32 = 1_000_000 / 10; // microseconds (10 Hz)
+    const SAMPLING_PERIOD: i32 = 1_000_000 / 50; // microseconds (50 Hz)
 
     fn enable(&self) {
         dbg!("Enabling sensors...");

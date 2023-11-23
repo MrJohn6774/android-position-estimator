@@ -206,24 +206,19 @@ impl SensorEventQueue {
                                 event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .x,
+                                    .data[0],
                                 event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .y,
+                                    .data[1],
                                 event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .vector
+                                    .data[2],
+                                event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .z,
+                                    .data[3],
                             ]
                         },
                     }),
@@ -239,24 +234,19 @@ impl SensorEventQueue {
                                 event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .x,
+                                    .data[0],
                                 event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .y,
+                                    .data[1],
                                 event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .vector
+                                    .data[2],
+                                event
                                     .__bindgen_anon_1
                                     .__bindgen_anon_1
-                                    .z,
+                                    .data[3],
                             ]
                         },
                     }),
