@@ -203,22 +203,10 @@ impl SensorEventQueue {
                         timestamp: event.timestamp,
                         values: unsafe {
                             vec![
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[0],
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[1],
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[2],
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[3],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[0],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[1],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[2],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[3],
                             ]
                         },
                     }),
@@ -231,22 +219,10 @@ impl SensorEventQueue {
                         timestamp: event.timestamp,
                         values: unsafe {
                             vec![
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[0],
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[1],
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[2],
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .data[3],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[0],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[1],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[2],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[3],
                             ]
                         },
                     }),
