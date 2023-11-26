@@ -3,7 +3,9 @@ use bevy::window::ApplicationLifetime;
 use bevy_debug_text_overlay::screen_print;
 use std::collections::VecDeque;
 
-use crate::ffi::sensor::{Sensor, SensorEvent, SensorEventQueue, SensorManager, SensorType};
+use crate::ffi::sensor::{
+    Sensor, SensorEvent, SensorEventQueue, SensorManager, SensorType, SensorValues,
+};
 
 pub struct SensorPlugin;
 
@@ -69,9 +71,10 @@ impl Sensors {
 }
 
 #[derive(Debug)]
-struct SensorDataSeries {
+pub struct SensorDataSeries {
     series: VecDeque<SensorEvent>,
     size: usize,
+    lp_alpha: f32,
 }
 
 impl SensorDataSeries {
@@ -81,10 +84,14 @@ impl SensorDataSeries {
         let mut series = VecDeque::with_capacity(size);
         series.push_back(SensorEvent::default());
 
-        Self { series, size }
+        Self {
+            series,
+            size,
+            lp_alpha: 0.9,
+        }
     }
 
-    pub fn add(&mut self, sensor_event: SensorEvent) -> Option<SensorEvent> {
+    pub fn add(&mut self, mut sensor_event: SensorEvent) -> Option<SensorEvent> {
         // newest data lives at the back, oldest at the front
         let mut expired_data = None;
 
@@ -93,6 +100,23 @@ impl SensorDataSeries {
         }
 
         if sensor_event.timestamp - self.latest().unwrap().timestamp >= Self::MIN_DELTA_TIME {
+            // low-pass filter
+            if let (SensorValues::Vec3(vector_latest), SensorValues::Vec3(vector_new)) =
+                (self.latest().unwrap().values, sensor_event.values)
+            {
+                sensor_event.values = SensorValues::Vec3(
+                    vector_latest * (1. - self.lp_alpha) + vector_new * self.lp_alpha,
+                );
+            }
+
+            if let (SensorValues::Quat(quat_latest), SensorValues::Quat(quat_new)) =
+                (self.latest().unwrap().values, sensor_event.values)
+            {
+                sensor_event.values = SensorValues::Quat(
+                    quat_latest * (1. - self.lp_alpha) + quat_new * self.lp_alpha,
+                );
+            }
+
             self.series.push_back(sensor_event);
         }
 
@@ -102,6 +126,8 @@ impl SensorDataSeries {
     pub fn t_minus(&self, index: usize) -> Option<&SensorEvent> {
         if index >= self.size {
             warn!("Invalid to access to SensorDataSeries with index {}", index);
+            return None;
+        } else if index >= self.series.len() {
             return None;
         }
 
@@ -118,12 +144,25 @@ impl SensorDataSeries {
 }
 
 #[derive(Debug, Resource)]
-struct SensorData {
-    accelerometer: SensorDataSeries,
-    gyroscope: SensorDataSeries,
-    rotation: SensorDataSeries,
-    compass: SensorDataSeries,
-    gravity: SensorDataSeries,
+pub struct SensorData {
+    pub accelerometer: SensorDataSeries,
+    pub gyroscope: SensorDataSeries,
+    pub rotation: SensorDataSeries,
+    pub compass: SensorDataSeries,
+    pub gravity: SensorDataSeries,
+}
+
+impl SensorData {
+    fn add_event(&mut self, event: SensorEvent) {
+        match event.sensor_type {
+            SensorType::Accelerometer => self.accelerometer.add(event),
+            SensorType::Gyroscope => self.gyroscope.add(event),
+            SensorType::Rotation => self.rotation.add(event),
+            SensorType::Compass => self.compass.add(event),
+            SensorType::Gravity => self.gravity.add(event),
+            _ => None,
+        };
+    }
 }
 
 impl Default for SensorData {
@@ -177,14 +216,7 @@ fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorD
     let events = sensors.get_events();
     screen_print!("Sensor queue length: {}", &events.len());
     events.iter().for_each(|event| {
-        match event.sensor_type {
-            SensorType::Accelerometer => sensor_data.accelerometer.add(event.clone()),
-            SensorType::Gyroscope => sensor_data.gyroscope.add(event.clone()),
-            SensorType::Rotation => sensor_data.rotation.add(event.clone()),
-            SensorType::Compass => sensor_data.compass.add(event.clone()),
-            SensorType::Gravity => sensor_data.gravity.add(event.clone()),
-            _ => None,
-        };
+        sensor_data.add_event(event.clone());
     });
 }
 
