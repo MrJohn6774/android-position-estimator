@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use bevy::log::warn;
+use bevy::{
+    log::warn,
+    math::{Quat, Vec3},
+};
 use ndk_sys::{
     ALooper_pollAll, ALooper_prepare, ASensor, ASensorEvent, ASensorEventQueue,
     ASensorEventQueue_disableSensor, ASensorEventQueue_enableSensor, ASensorEventQueue_getEvents,
@@ -42,12 +45,29 @@ pub struct SensorManager {
     manager: *mut ASensorManager,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum SensorValues {
+    Vec3(Vec3),
+    Quat(Quat),
+}
+
 #[derive(Clone, Debug)]
 pub struct SensorEvent {
     pub accuracy: SensorAccuracy,
     pub sensor_type: SensorType,
     pub timestamp: i64,
-    pub values: Vec<f32>,
+    pub values: SensorValues,
+}
+
+impl Default for SensorEvent {
+    fn default() -> Self {
+        Self {
+            accuracy: SensorAccuracy::NoContact,
+            sensor_type: SensorType::Unavailable,
+            timestamp: 0,
+            values: SensorValues::Vec3(Vec3::ZERO),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -83,17 +103,6 @@ impl SensorManager {
     pub fn destroy_event_queue(&self, queue: SensorEventQueue) {
         let status = unsafe { ASensorManager_destroyEventQueue(self.manager, queue.queue) };
         assert!(status >= 0);
-    }
-}
-
-impl Default for SensorEvent {
-    fn default() -> Self {
-        Self {
-            accuracy: SensorAccuracy::NoContact,
-            sensor_type: SensorType::Accelerometer,
-            timestamp: 0,
-            values: vec![0., 0., 0.],
-        }
     }
 }
 
@@ -135,29 +144,11 @@ impl SensorEventQueue {
                             sensor_type: SensorType::Accelerometer,
                             timestamp: event.timestamp,
                             values: unsafe {
-                                vec![
-                                    event
-                                        .__bindgen_anon_1
-                                        .__bindgen_anon_1
-                                        .acceleration
-                                        .__bindgen_anon_1
-                                        .__bindgen_anon_1
-                                        .x,
-                                    event
-                                        .__bindgen_anon_1
-                                        .__bindgen_anon_1
-                                        .acceleration
-                                        .__bindgen_anon_1
-                                        .__bindgen_anon_1
-                                        .y,
-                                    event
-                                        .__bindgen_anon_1
-                                        .__bindgen_anon_1
-                                        .acceleration
-                                        .__bindgen_anon_1
-                                        .__bindgen_anon_1
-                                        .z,
-                                ]
+                                SensorValues::Vec3(Vec3::new(
+                                    event.__bindgen_anon_1.__bindgen_anon_1.data[0],
+                                    event.__bindgen_anon_1.__bindgen_anon_1.data[1],
+                                    event.__bindgen_anon_1.__bindgen_anon_1.data[2],
+                                ))
                             },
                         });
                     }
@@ -169,29 +160,11 @@ impl SensorEventQueue {
                         sensor_type: SensorType::Gyroscope,
                         timestamp: event.timestamp,
                         values: unsafe {
-                            vec![
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .gyro
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .x,
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .gyro
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .y,
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .gyro
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .z,
-                            ]
+                            SensorValues::Vec3(Vec3::new(
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[0],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[1],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[2],
+                            ))
                         },
                     }),
                     SensorType::Rotation => events.push(SensorEvent {
@@ -202,12 +175,12 @@ impl SensorEventQueue {
                         sensor_type: SensorType::Rotation,
                         timestamp: event.timestamp,
                         values: unsafe {
-                            vec![
+                            SensorValues::Quat(Quat::from_xyzw(
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[0],
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[1],
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[2],
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[3],
-                            ]
+                            ))
                         },
                     }),
                     SensorType::Compass => events.push(SensorEvent {
@@ -218,12 +191,12 @@ impl SensorEventQueue {
                         sensor_type: SensorType::Compass,
                         timestamp: event.timestamp,
                         values: unsafe {
-                            vec![
+                            SensorValues::Quat(Quat::from_xyzw(
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[0],
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[1],
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[2],
                                 event.__bindgen_anon_1.__bindgen_anon_1.data[3],
-                            ]
+                            ))
                         },
                     }),
                     SensorType::Gravity => events.push(SensorEvent {
@@ -234,29 +207,11 @@ impl SensorEventQueue {
                         sensor_type: SensorType::Gravity,
                         timestamp: event.timestamp,
                         values: unsafe {
-                            vec![
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .x,
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .y,
-                                event
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .vector
-                                    .__bindgen_anon_1
-                                    .__bindgen_anon_1
-                                    .z,
-                            ]
+                            SensorValues::Vec3(Vec3::new(
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[0],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[1],
+                                event.__bindgen_anon_1.__bindgen_anon_1.data[2],
+                            ))
                         },
                     }),
                     _ => (),
