@@ -13,9 +13,9 @@ use bevy::{
 };
 use bevy_debug_text_overlay::OverlayPlugin;
 use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
-use plugins::camera::AppCameraPlugin;
 #[cfg(target_os = "android")]
 use plugins::sensor::SensorPlugin;
+use plugins::{camera::AppCameraPlugin, state::StatePlugin};
 
 #[bevy_main]
 pub fn main() {
@@ -42,7 +42,7 @@ pub fn main() {
     .add_plugins(ScreenDiagnosticsPlugin::default())
     .add_plugins(ScreenFrameDiagnosticsPlugin)
     .add_plugins(OverlayPlugin::default())
-    .add_plugins(AppCameraPlugin)
+    .add_plugins((AppCameraPlugin, StatePlugin))
     .add_systems(Startup, (setup_scene));
 
     #[cfg(target_os = "android")]

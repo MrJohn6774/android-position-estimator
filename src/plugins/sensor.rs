@@ -87,7 +87,7 @@ impl SensorDataSeries {
         Self {
             series,
             size,
-            lp_alpha: 0.9,
+            lp_alpha: 0.2738, // 3Hz filter
         }
     }
 
@@ -101,21 +101,19 @@ impl SensorDataSeries {
 
         if sensor_event.timestamp - self.latest().unwrap().timestamp >= Self::MIN_DELTA_TIME {
             // low-pass filter
-            if let (SensorValues::Vec3(vector_latest), SensorValues::Vec3(vector_new)) =
-                (self.latest().unwrap().values, sensor_event.values)
-            {
-                sensor_event.values = SensorValues::Vec3(
-                    vector_latest * (1. - self.lp_alpha) + vector_new * self.lp_alpha,
-                );
-            }
-
-            if let (SensorValues::Quat(quat_latest), SensorValues::Quat(quat_new)) =
-                (self.latest().unwrap().values, sensor_event.values)
-            {
-                sensor_event.values = SensorValues::Quat(
-                    quat_latest * (1. - self.lp_alpha) + quat_new * self.lp_alpha,
-                );
-            }
+            sensor_event.values = match (self.latest().unwrap().values, sensor_event.values) {
+                (SensorValues::Vec3(vector_latest), SensorValues::Vec3(vector_new)) => {
+                    SensorValues::Vec3(
+                        vector_latest * (1. - self.lp_alpha) + vector_new * self.lp_alpha,
+                    )
+                }
+                (SensorValues::Quat(quat_latest), SensorValues::Quat(quat_new)) => {
+                    SensorValues::Quat(
+                        quat_latest * (1. - self.lp_alpha) + quat_new * self.lp_alpha,
+                    )
+                }
+                _ => sensor_event.values,
+            };
 
             self.series.push_back(sensor_event);
         }

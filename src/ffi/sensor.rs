@@ -13,7 +13,7 @@ use ndk_sys::{
     ASENSOR_STATUS_ACCURACY_MEDIUM, ASENSOR_STATUS_NO_CONTACT, ASENSOR_STATUS_UNRELIABLE,
     ASENSOR_TYPE_ACCELEROMETER, ASENSOR_TYPE_ADDITIONAL_INFO,
     ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR, ASENSOR_TYPE_GRAVITY, ASENSOR_TYPE_GYROSCOPE,
-    ASENSOR_TYPE_ROTATION_VECTOR,
+    ASENSOR_TYPE_LINEAR_ACCELERATION, ASENSOR_TYPE_ROTATION_VECTOR,
 };
 use num_derive::FromPrimitive;
 
@@ -28,7 +28,7 @@ pub enum SensorAccuracy {
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum SensorType {
-    Accelerometer = ASENSOR_TYPE_ACCELEROMETER as isize,
+    Accelerometer = ASENSOR_TYPE_LINEAR_ACCELERATION as isize,
     Gyroscope = ASENSOR_TYPE_GYROSCOPE as isize,
     Rotation = ASENSOR_TYPE_ROTATION_VECTOR as isize,
     Compass = ASENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR as isize,
@@ -49,6 +49,15 @@ pub struct SensorManager {
 pub enum SensorValues {
     Vec3(Vec3),
     Quat(Quat),
+}
+
+impl SensorValues {
+    pub fn vec3(&self) -> Option<&Vec3> {
+        match self {
+            SensorValues::Vec3(data) => Some(data),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
