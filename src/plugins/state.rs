@@ -55,6 +55,6 @@ fn update_state_vector(sensor_data: Res<SensorData>, mut states: ResMut<StateVec
 }
 
 fn print_state(states: Res<StateVector>) {
-    screen_print!("Velocity: {:?}", states.velocity);
-    screen_print!("Position: {:?}", states.position);
+    // screen_print!("Velocity: {:?}", states.velocity);
+    // screen_print!("Position: {:?}", states.position);
 }

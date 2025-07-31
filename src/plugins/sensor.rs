@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::window::ApplicationLifetime;
+use bevy::window::AppLifecycle;
 use bevy_debug_text_overlay::screen_print;
 use std::collections::VecDeque;
 
@@ -197,43 +197,42 @@ fn setup_sensors(mut sensors: NonSendMut<Sensors>) {
     sensors.queue = Some(queue);
 }
 
-fn handle_lifetime(
-    mut lifetime_events: EventReader<ApplicationLifetime>,
-    sensors: NonSend<Sensors>,
-) {
+fn handle_lifetime(mut lifetime_events: EventReader<AppLifecycle>, sensors: NonSend<Sensors>) {
     for event in lifetime_events.read() {
         match event {
-            ApplicationLifetime::Resumed => sensors.enable(),
-            ApplicationLifetime::Suspended => sensors.disable(),
-            ApplicationLifetime::Started => sensors.enable(),
+            AppLifecycle::Idle => sensors.disable(),
+            AppLifecycle::Running => sensors.enable(),
+            AppLifecycle::WillSuspend => sensors.disable(),
+            AppLifecycle::Suspended => sensors.disable(),
+            AppLifecycle::WillResume => sensors.enable(),
         }
     }
 }
 
 fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorData>) {
     let events = sensors.get_events();
-    screen_print!("Sensor queue length: {}", &events.len());
+    // screen_print!("Sensor queue length: {}", &events.len());
     events.iter().for_each(|event| {
         sensor_data.add_event(event.clone());
     });
 }
 
 fn print_sensor_data(sensor_data: Res<SensorData>) {
-    screen_print!(
-        "Accel: {:?}",
-        sensor_data.accelerometer.latest().unwrap().values
-    );
-    screen_print!("Gyro: {:?}", sensor_data.gyroscope.latest().unwrap().values);
-    screen_print!(
-        "Rotation: {:?}",
-        sensor_data.rotation.latest().unwrap().values
-    );
-    screen_print!(
-        "Compass: {:?}",
-        sensor_data.compass.latest().unwrap().values
-    );
-    screen_print!(
-        "Gravity: {:?}",
-        sensor_data.gravity.latest().unwrap().values
-    );
+    // screen_print!(
+    //     "Accel: {:?}",
+    //     sensor_data.accelerometer.latest().unwrap().values
+    // );
+    // screen_print!("Gyro: {:?}", sensor_data.gyroscope.latest().unwrap().values);
+    // screen_print!(
+    //     "Rotation: {:?}",
+    //     sensor_data.rotation.latest().unwrap().values
+    // );
+    // screen_print!(
+    //     "Compass: {:?}",
+    //     sensor_data.compass.latest().unwrap().values
+    // );
+    // screen_print!(
+    //     "Gravity: {:?}",
+    //     sensor_data.gravity.latest().unwrap().values
+    // );
 }

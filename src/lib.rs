@@ -8,10 +8,12 @@ mod plugins;
 use bevy::render::settings::Backends;
 use bevy::{
     prelude::*,
-    render::{settings::WgpuSettings, RenderPlugin},
+    render::{RenderPlugin, settings::WgpuSettings},
     window::WindowMode,
+    winit::WinitSettings,
 };
 use bevy_debug_text_overlay::OverlayPlugin;
+use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
 use bevy_screen_diagnostics::{ScreenDiagnosticsPlugin, ScreenFrameDiagnosticsPlugin};
 #[cfg(target_os = "android")]
 use plugins::sensor::SensorPlugin;
@@ -29,6 +31,8 @@ pub fn main() {
                     ..default()
                 }
                 .into(),
+                synchronous_pipeline_compilation: false,
+                ..default()
             })
             .set(WindowPlugin {
                 primary_window: Some(Window {
@@ -39,19 +43,18 @@ pub fn main() {
                 ..default()
             }),
     )
+    // .add_plugins(InfiniteGridPlugin)
     .add_plugins(ScreenDiagnosticsPlugin::default())
     .add_plugins(ScreenFrameDiagnosticsPlugin)
-    .add_plugins(OverlayPlugin::default())
+    // .add_plugins(OverlayPlugin::default())
     .add_plugins((AppCameraPlugin, StatePlugin))
     .add_systems(Startup, (setup_scene));
 
     #[cfg(target_os = "android")]
-    app.add_plugins(SensorPlugin);
-
-    // MSAA makes some Android devices panic, this is under investigation
-    // https://github.com/bevyengine/bevy/issues/8229
-    #[cfg(target_os = "android")]
-    app.insert_resource(Msaa::Off);
+    {
+        app.add_plugins(SensorPlugin);
+        app.insert_resource(WinitSettings::mobile());
+    }
 
     app.run();
 }
@@ -62,43 +65,35 @@ fn setup_scene(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    // grid
+    // commands.spawn(InfiniteGridBundle::default());
     // plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Plane::from_size(5.0).into()),
-        material: materials.add(Color::rgb(0.1, 0.2, 0.1).into()),
-        ..default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(5.0, 5.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.1, 0.2, 0.1))),
+    ));
     // cube
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(0.5, 0.4, 0.3).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::default())),
+        MeshMaterial3d(materials.add(Color::srgb(0.5, 0.4, 0.3))),
+        Transform::from_xyz(0.0, 0.5, 0.0),
+    ));
     // sphere
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(
-            Mesh::try_from(shape::Icosphere {
-                subdivisions: 4,
-                radius: 0.5,
-            })
-            .unwrap(),
-        ),
-        material: materials.add(Color::rgb(0.1, 0.4, 0.8).into()),
-        transform: Transform::from_xyz(1.5, 1.5, 1.5),
-        ..default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Sphere::new(0.5).mesh().ico(4).unwrap())),
+        MeshMaterial3d(materials.add(Color::srgb(0.1, 0.4, 0.8))),
+        Transform::from_xyz(1.5, 1.5, 1.5),
+    ));
     // light
-    commands.spawn(PointLightBundle {
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        point_light: PointLight {
-            intensity: 5000.0,
+    commands.spawn((
+        PointLight {
+            intensity: 1_000_000.0,
             // Shadows makes some Android devices segfault, this is under investigation
             // https://github.com/bevyengine/bevy/issues/8214
             #[cfg(not(target_os = "android"))]
             shadows_enabled: true,
             ..default()
         },
-        ..default()
-    });
+        Transform::from_xyz(4.0, 8.0, 4.0),
+    ));
 }

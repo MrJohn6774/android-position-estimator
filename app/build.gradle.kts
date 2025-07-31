@@ -1,9 +1,10 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
+import groovy.lang.GroovyObject
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.github.willir.rust.cargo-ndk-android")
+    id("org.mozilla.rust-android-gradle.rust-android")
 }
 
 android {
@@ -65,19 +66,18 @@ android {
     }
 }
 
-cargoNdk {
-    // Reference: https://github.com/willir/cargo-ndk-android-gradle
-    module = "."
-    targets = arrayListOf("arm64")
-    apiLevel = 33
+extensions.configure<Any>("cargo") {
+    val ext = this as GroovyObject
+    ext.setProperty("module", "../.")
+    ext.setProperty("targets", listOf("arm64"))
+    ext.setProperty("libname", "android_position_estimator")
 }
 
-tasks.register<Exec>("cargoClean") {
-    executable("cargo")     // cargo.cargoCommand
-    args("clean")
-    workingDir("$projectDir/../${cargoNdk.module}")
+tasks.whenTaskAdded {
+    if (name == "javaPreCompileDebug" || name == "javaPreCompileRelease") {
+        dependsOn("cargoBuild")
+    }
 }
-tasks.clean.dependsOn("cargoClean")
 
 dependencies {
 

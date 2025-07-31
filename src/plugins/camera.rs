@@ -17,10 +17,12 @@ impl Plugin for AppCameraPlugin {
 
 fn setup(mut commands: Commands) {
     commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        },
+        Camera3d::default(),
+        Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        // MSAA makes some Android devices panic, this is under investigation
+        // https://github.com/bevyengine/bevy/issues/8229
+        #[cfg(target_os = "android")]
+        Msaa::Off,
         PanOrbitCamera::default(),
     ));
 }
@@ -80,7 +82,7 @@ fn touch_control(
     config: Res<TouchConfig>,
     time: Res<Time>,
 ) {
-    let Ok(mut pan_orbit) = orbit_camera.get_single_mut() else {
+    let Ok(mut pan_orbit) = orbit_camera.single_mut() else {
         return;
     };
 
@@ -136,16 +138,16 @@ fn touch_control(
         )
     {
         if touch_tracker.gesture_type == GestureType::None {
-            touch_tracker.time_start_touch = time.elapsed_seconds();
+            touch_tracker.time_start_touch = time.elapsed_secs();
         }
         touch_tracker.gesture_type = GestureType::Pan;
-        let time_since_start = time.elapsed_seconds() - touch_tracker.time_start_touch;
+        let time_since_start = time.elapsed_secs() - touch_tracker.time_start_touch;
         if time_since_start < config.touch_time_min {
             return;
         }
 
-        pan_orbit.target_alpha -= touches[0].delta().x * config.drag_sensitivity;
-        pan_orbit.target_beta += touches[0].delta().y * config.drag_sensitivity;
+        pan_orbit.target_yaw -= touches[0].delta().x * config.drag_sensitivity;
+        pan_orbit.target_pitch += touches[0].delta().y * config.drag_sensitivity;
 
         touch_tracker.last_touch_a = Some(touches[0].position());
         touch_tracker.last_touch_b = None;
