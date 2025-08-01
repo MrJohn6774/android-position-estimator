@@ -1,4 +1,5 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
+import org.gradle.api.tasks.Copy
 import groovy.lang.GroovyObject
 
 plugins {
@@ -79,8 +80,15 @@ tasks.whenTaskAdded {
     }
 }
 
-dependencies {
+tasks.whenObjectAdded {
+    if ((this.name == "mergeDebugJniLibFolders" || this.name == "mergeReleaseJniLibFolders")) {
+        this.dependsOn("cargoBuild")
+        // fix mergeDebugJniLibFolders  UP-TO-DATE
+        this.inputs.dir(layout.buildDirectory.dir("rustJniLibs/android"))
+    }
+}
 
+dependencies {
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation("androidx.activity:activity-compose:1.7.2")

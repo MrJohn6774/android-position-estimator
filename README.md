@@ -13,7 +13,7 @@ rustup target add aarch64-linux-android x86_64-linux-android
 cargo install cargo-ndk
 ```
 - Specify path to NDK by setting `ANDROID_NDK_HOME` env variable
-- Install [sscache]() for significantly shorter build time
+- Install [sscache](https://github.com/mozilla/sccache) for significantly shorter build time
 ```bash
 cargo install sccache --locked
 ```
@@ -24,7 +24,7 @@ rustc-wrapper = "~/.cargo/bin/sccache"
 ```
 
 ### Build
-Android build is managed by [cargo-ndk-android-gradle](https://github.com/willir/cargo-ndk-android-gradle). Simply click `Run 'app'` in Android Studio.
+Android build is managed by [rust-android-gradle](https://github.com/mozilla/rust-android-gradle). Simply click `Run 'app'` in Android Studio.
 
 It is essentially running the following commands under the hood:
 ```bash
