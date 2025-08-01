@@ -6,11 +6,12 @@ mod plugins;
 
 #[cfg(target_os = "android")]
 use bevy::render::settings::Backends;
+#[cfg(target_os = "android")]
+use bevy::winit::WinitSettings;
 use bevy::{
     prelude::*,
     render::{RenderPlugin, settings::WgpuSettings},
     window::WindowMode,
-    winit::WinitSettings,
 };
 use bevy_debug_text_overlay::OverlayPlugin;
 use bevy_infinite_grid::{InfiniteGridBundle, InfiniteGridPlugin};
@@ -43,10 +44,10 @@ pub fn main() {
                 ..default()
             }),
     )
-    // .add_plugins(InfiniteGridPlugin)
+    .add_plugins(InfiniteGridPlugin)
     .add_plugins(ScreenDiagnosticsPlugin::default())
     .add_plugins(ScreenFrameDiagnosticsPlugin)
-    // .add_plugins(OverlayPlugin::default())
+    .add_plugins(OverlayPlugin::default())
     .add_plugins((AppCameraPlugin, StatePlugin))
     .add_systems(Startup, (setup_scene));
 
@@ -66,7 +67,7 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // grid
-    // commands.spawn(InfiniteGridBundle::default());
+    commands.spawn(InfiniteGridBundle::default());
     // plane
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(5.0, 5.0))),

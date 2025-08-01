@@ -211,28 +211,28 @@ fn handle_lifetime(mut lifetime_events: EventReader<AppLifecycle>, sensors: NonS
 
 fn update_sensor_data(sensors: NonSend<Sensors>, mut sensor_data: ResMut<SensorData>) {
     let events = sensors.get_events();
-    // screen_print!("Sensor queue length: {}", &events.len());
+    screen_print!("Sensor queue length: {}", &events.len());
     events.iter().for_each(|event| {
         sensor_data.add_event(event.clone());
     });
 }
 
 fn print_sensor_data(sensor_data: Res<SensorData>) {
-    // screen_print!(
-    //     "Accel: {:?}",
-    //     sensor_data.accelerometer.latest().unwrap().values
-    // );
-    // screen_print!("Gyro: {:?}", sensor_data.gyroscope.latest().unwrap().values);
-    // screen_print!(
-    //     "Rotation: {:?}",
-    //     sensor_data.rotation.latest().unwrap().values
-    // );
-    // screen_print!(
-    //     "Compass: {:?}",
-    //     sensor_data.compass.latest().unwrap().values
-    // );
-    // screen_print!(
-    //     "Gravity: {:?}",
-    //     sensor_data.gravity.latest().unwrap().values
-    // );
+    screen_print!(
+        "Accel: {:?}",
+        sensor_data.accelerometer.latest().unwrap().values
+    );
+    screen_print!("Gyro: {:?}", sensor_data.gyroscope.latest().unwrap().values);
+    screen_print!(
+        "Rotation: {:?}",
+        sensor_data.rotation.latest().unwrap().values
+    );
+    screen_print!(
+        "Compass: {:?}",
+        sensor_data.compass.latest().unwrap().values
+    );
+    screen_print!(
+        "Gravity: {:?}",
+        sensor_data.gravity.latest().unwrap().values
+    );
 }

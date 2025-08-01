@@ -51,7 +51,7 @@ bevy = { version = "^0.16.1", default-features = false, features = [
     "x11",
     "zstd",
 ] }
-bevy-debug-text-overlay = { git = "https://github.com/JordanLloydHall/bevy-debug-text-overlay", branch = "upgrade_to_bevy_0_14" }
+bevy-debug-text-overlay = { git = "https://github.com/MrJohn6774/bevy-debug-text-overlay" }
 bevy_infinite_grid = "0.15.0"
 bevy_panorbit_camera = "^0.27.1"
 bevy_screen_diagnostics = "^0.8.1"

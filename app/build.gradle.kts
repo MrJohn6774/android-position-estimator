@@ -1,5 +1,3 @@
-import com.android.build.gradle.internal.tasks.factory.dependsOn
-import org.gradle.api.tasks.Copy
 import groovy.lang.GroovyObject
 
 plugins {
@@ -69,9 +67,21 @@ android {
 
 extensions.configure<Any>("cargo") {
     val ext = this as GroovyObject
+    val libname = "android_position_estimator"
+
     ext.setProperty("module", "../.")
     ext.setProperty("targets", listOf("arm64"))
-    ext.setProperty("libname", "android_position_estimator")
+    ext.setProperty("libname", libname)
+    ext.invokeMethod(
+        "exec",
+        KotlinClosure2<ExecSpec, Any, Unit>({ spec, _ ->
+            spec.environment(
+                "RUST_ANDROID_GRADLE_CC_LINK_ARG",
+                "-Wl,-z,max-page-size=16384,-soname,lib${libname}.so"
+            )
+            Unit
+        }, this, this)
+    )
 }
 
 tasks.whenTaskAdded {
